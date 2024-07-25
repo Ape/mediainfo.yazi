@@ -3,6 +3,9 @@ local skip_labels = {
 	["CompleteName_Last"] = true,
 	["Unique ID"] = true,
 	["File size"] = true,
+	["Format/Info"] = true,
+	["Codec ID/Info"] = true,
+	["MD5 of the unencoded content"] = true,
 }
 
 local M = {}
