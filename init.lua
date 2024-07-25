@@ -27,7 +27,7 @@ function M:peek()
 	if output then
 		local i = 0
 		for str in output.stdout:gmatch("[^\n]*") do
-			local label, value = str:match("(.*[^ ]) *: (.*)")
+			local label, value = str:match("(.*[^ ])  +: (.*)")
 			local line
 
 			if label then
