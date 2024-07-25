@@ -1,5 +1,6 @@
 local skip_labels = {
 	["Complete name"] = true,
+	["CompleteName_Last"] = true,
 	["Unique ID"] = true,
 	["File size"] = true,
 }
