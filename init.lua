@@ -15,7 +15,7 @@ function M:peek()
 
 	if self:preload() == 1 then
 		local cache = ya.file_cache(self)
-		if cache and fs.cha(cache).length > 0 then
+		if cache or not fs.cha(cache) then
 			image_height = ya.image_show(cache, self.area).h
 		end
 	end
