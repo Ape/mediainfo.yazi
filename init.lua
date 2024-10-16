@@ -1,4 +1,3 @@
-local skip_labels = 
 local skip_labels = {
 	["Complete name"] = true,
 	["CompleteName_Last"] = true,
