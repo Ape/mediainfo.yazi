@@ -12,19 +12,18 @@ local M = {}
 
 function M:peek()
 	local image_height = 0
-
-	if self:preload() == 1 then
-		local cache = ya.file_cache(self)
-		if cache and fs.cha(cache).length > 0 then
-			image_height = ya.image_show(cache, self.area).h
-		end
+	local start, cache = os.clock(), ya.file_cache(self)
+	if not cache or self:preload() ~= 1 then
+		return 1
 	end
 
+	ya.sleep(math.max(0, PREVIEW.image_delay / 1000 + start - os.clock()))
+	local rendered_img = ya.image_show(cache, self.area)
+	if rendered_img and rendered_img.h then
+		image_height = rendered_img and rendered_img.h
+	end
 	local cmd = "mediainfo"
-	local output, code = Command(cmd)
-		:args({ tostring(self.file.url) })
-		:stdout(Command.PIPED)
-		:output()
+	local output, code = Command(cmd):args({ tostring(self.file.url) }):stdout(Command.PIPED):output()
 
 	local lines = {}
 
@@ -60,15 +59,14 @@ function M:peek()
 	end
 
 	ya.preview_widgets(self, {
-		ui.Paragraph(
-			ui.Rect({
+		ui.Text(lines)
+			:area(ui.Rect({
 				x = self.area.x,
 				y = self.area.y + image_height,
 				w = self.area.w,
 				h = self.area.h - image_height,
-			}),
-			lines
-		):wrap(ui.Paragraph.WRAP),
+			}))
+			:wrap(ui.Text.WRAP),
 	})
 end
 
@@ -91,12 +89,18 @@ function M:preload()
 
 	local cmd = "ffmpegthumbnailer"
 	local child, code = Command(cmd):args({
-		"-q", "6",
-		"-c", "jpeg",
-		"-i", tostring(self.file.url),
-		"-o", tostring(cache),
-		"-t", "5",
-		"-s", tostring(PREVIEW.max_width),
+		"-q",
+		"6",
+		"-c",
+		"jpeg",
+		"-i",
+		tostring(self.file.url),
+		"-o",
+		tostring(cache),
+		"-t",
+		"5",
+		"-s",
+		tostring(PREVIEW.max_width),
 	}):spawn()
 
 	if not child then
@@ -109,3 +113,4 @@ function M:preload()
 end
 
 return M
+
