@@ -57,15 +57,14 @@ function M:peek()
 	end
 
 	ya.preview_widgets(self, {
-		ui.Text(
-			ui.Rect({
+		ui.Text(lines)
+			:area(ui.Rect({
 				x = self.area.x,
 				y = self.area.y + image_height,
 				w = self.area.w,
 				h = self.area.h - image_height,
-			}),
-			lines
-		):wrap(ui.Text.WRAP),
+			}))
+			:wrap(ui.Text.WRAP),
 	})
 end
 
