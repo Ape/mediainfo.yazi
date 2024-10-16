@@ -21,10 +21,7 @@ function M:peek()
 	end
 
 	local cmd = "mediainfo"
-	local output, code = Command(cmd)
-		:args({ tostring(self.file.url) })
-		:stdout(Command.PIPED)
-		:output()
+	local output, code = Command(cmd):args({ tostring(self.file.url) }):stdout(Command.PIPED):output()
 
 	local lines = {}
 
@@ -60,7 +57,7 @@ function M:peek()
 	end
 
 	ya.preview_widgets(self, {
-		ui.Paragraph(
+		ui.Text(
 			ui.Rect({
 				x = self.area.x,
 				y = self.area.y + image_height,
@@ -68,7 +65,7 @@ function M:peek()
 				h = self.area.h - image_height,
 			}),
 			lines
-		):wrap(ui.Paragraph.WRAP),
+		):wrap(ui.Text.WRAP),
 	})
 end
 
@@ -91,12 +88,18 @@ function M:preload()
 
 	local cmd = "ffmpegthumbnailer"
 	local child, code = Command(cmd):args({
-		"-q", "6",
-		"-c", "jpeg",
-		"-i", tostring(self.file.url),
-		"-o", tostring(cache),
-		"-t", "5",
-		"-s", tostring(PREVIEW.max_width),
+		"-q",
+		"6",
+		"-c",
+		"jpeg",
+		"-i",
+		tostring(self.file.url),
+		"-o",
+		tostring(cache),
+		"-t",
+		"5",
+		"-s",
+		tostring(PREVIEW.max_width),
 	}):spawn()
 
 	if not child then
