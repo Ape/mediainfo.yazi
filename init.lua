@@ -1,3 +1,4 @@
+local skip_labels = 
 local skip_labels = {
 	["Complete name"] = true,
 	["CompleteName_Last"] = true,
@@ -12,14 +13,16 @@ local M = {}
 
 function M:peek()
 	local image_height = 0
-
-	if self:preload() == 1 then
-		local cache = ya.file_cache(self)
-		if cache or not fs.cha(cache) then
-			image_height = ya.image_show(cache, self.area).h
-		end
+	local start, cache = os.clock(), ya.file_cache(self)
+	if not cache or self:preload() ~= 1 then
+		return 1
 	end
 
+	ya.sleep(math.max(0, PREVIEW.image_delay / 1000 + start - os.clock()))
+	local rendered_img = ya.image_show(cache, self.area)
+	if rendered_img and rendered_img.h then
+		image_height = rendered_img and rendered_img.h
+	end
 	local cmd = "mediainfo"
 	local output, code = Command(cmd):args({ tostring(self.file.url) }):stdout(Command.PIPED):output()
 
@@ -111,3 +114,4 @@ function M:preload()
 end
 
 return M
+
