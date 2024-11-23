@@ -1,4 +1,3 @@
-local skip_labels = 
 local skip_labels = {
 	["Complete name"] = true,
 	["CompleteName_Last"] = true,
@@ -10,39 +9,48 @@ local skip_labels = {
 }
 
 local M = {}
+local suffix = "_mediainfo"
+
+local function read_mediainfo_cached_file(file_path)
+	-- Open the file in read mode
+	local file = io.open(file_path, "r")
+
+	if file then
+		-- Read the entire file content
+		local content = file:read("*all")
+		file:close()
+		return content
+	end
+end
 
 function M:peek()
-	local image_height = 0
-	local start, cache = os.clock(), ya.file_cache(self)
-	if not cache or self:preload() ~= 1 then
-		return 1
+	local start, cache_img_url = os.clock(), ya.file_cache(self)
+	if not cache_img_url or self:preload() ~= 1 then
+		return
 	end
 
+	local cache_img_url_no_skip = ya.file_cache({ file = self.file, skip = 0 })
+	local cache_mediainfo_path = tostring(cache_img_url_no_skip) .. suffix
 	ya.sleep(math.max(0, PREVIEW.image_delay / 1000 + start - os.clock()))
-	local rendered_img = ya.image_show(cache, self.area)
-	if rendered_img and rendered_img.h then
-		image_height = rendered_img and rendered_img.h
-	end
-	local cmd = "mediainfo"
-	local output, code = Command(cmd):args({ tostring(self.file.url) }):stdout(Command.PIPED):output()
+	local output = read_mediainfo_cached_file(cache_mediainfo_path)
 
 	local lines = {}
 
 	if output then
 		local i = 0
-		for str in output.stdout:gmatch("[^\n]*") do
+		for str in output:gmatch("[^\n]*") do
 			local label, value = str:match("(.*[^ ])  +: (.*)")
 			local line
 
 			if label then
 				if not skip_labels[label] then
 					line = ui.Line({
-						ui.Span(label .. ": "):bold(),
-						ui.Span(value),
+						ui.Span(label .. ": "):style(ui.Style():bold()),
+						ui.Span(value):style(ui.Style():fg("blue")),
 					})
 				end
 			elseif str ~= "General" then
-				line = ui.Line({ ui.Span(str):underline() })
+				line = ui.Line({ ui.Span(str):style(ui.Style():fg("green")) })
 			end
 
 			if line then
@@ -54,11 +62,10 @@ function M:peek()
 				i = i + math.max(1, math.ceil(line:width() / max_width))
 			end
 		end
-	else
-		local error = string.format("Spawn `%s` command returns %s", cmd, code)
-		table.insert(lines, ui.Line(error))
 	end
 
+	local rendered_img_rect = ya.image_show(cache_img_url, self.area)
+	local image_height = rendered_img_rect and rendered_img_rect.h or 0
 	ya.preview_widgets(self, {
 		ui.Text(lines)
 			:area(ui.Rect({
@@ -74,44 +81,35 @@ end
 function M:seek(units)
 	local h = cx.active.current.hovered
 	if h and h.url == self.file.url then
-		local step = math.floor(units * self.area.h / 10)
 		ya.manager_emit("peek", {
-			math.max(0, cx.active.preview.skip + step),
+			math.max(0, cx.active.preview.skip + units),
 			only_if = self.file.url,
 		})
 	end
 end
 
 function M:preload()
-	local cache = ya.file_cache(self)
-	if not cache or fs.cha(cache) then
+	local video = require("video")
+	video = ya.dict_merge(video, { skip = self.skip, file = self.file })
+	local cache_img_status = video:preload()
+	if cache_img_status ~= 1 then
+		return cache_img_status
+	end
+
+	local cache_img_url_no_skip = ya.file_cache({ file = self.file, skip = 0 })
+	local cache_mediainfo_url = Url(tostring(cache_img_url_no_skip) .. suffix)
+
+	local cha = fs.cha(cache_mediainfo_url)
+	if cha and cha.len > 1000 then
 		return 1
 	end
+	local cmd = "mediainfo"
+	local output, _ = Command(cmd):args({ tostring(self.file.url) }):stdout(Command.PIPED):output()
 
-	local cmd = "ffmpegthumbnailer"
-	local child, code = Command(cmd):args({
-		"-q",
-		"6",
-		"-c",
-		"jpeg",
-		"-i",
-		tostring(self.file.url),
-		"-o",
-		tostring(cache),
-		"-t",
-		"5",
-		"-s",
-		tostring(PREVIEW.max_width),
-	}):spawn()
-
-	if not child then
-		ya.err(string.format("spawn `%s` command returns %s", cmd, code))
-		return 0
-	end
-
-	local status = child:wait()
-	return status and status.success and 1 or 2
+	return fs.write(
+		cache_mediainfo_url,
+		output and output.stdout or string.format("Failed to start `%s`, Do you have `%s` installed?", cmd, cmd)
+	) and 1 or 2
 end
 
 return M
-
