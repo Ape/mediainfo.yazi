@@ -23,13 +23,13 @@ local function read_mediainfo_cached_file(file_path)
 	end
 end
 
-function M:peek()
-	local start, cache_img_url = os.clock(), ya.file_cache(self)
-	if not cache_img_url or self:preload() ~= 1 then
+function M:peek(job)
+	local start, cache_img_url = os.clock(), ya.file_cache(job)
+	if not cache_img_url or self:preload(job) ~= 1 then
 		return
 	end
 
-	local cache_img_url_no_skip = ya.file_cache({ file = self.file, skip = 0 })
+	local cache_img_url_no_skip = ya.file_cache({ file = job.file, skip = 0 })
 	local cache_mediainfo_path = tostring(cache_img_url_no_skip) .. suffix
 	ya.sleep(math.max(0, PREVIEW.image_delay / 1000 + start - os.clock()))
 	local output = read_mediainfo_cached_file(cache_mediainfo_path)
@@ -54,49 +54,49 @@ function M:peek()
 			end
 
 			if line then
-				if i >= self.skip then
+				if i >= job.skip then
 					table.insert(lines, line)
 				end
 
-				local max_width = math.max(1, self.area.w - 3)
+				local max_width = math.max(1, job.area.w - 3)
 				i = i + math.max(1, math.ceil(line:width() / max_width))
 			end
 		end
 	end
 
-	local rendered_img_rect = ya.image_show(cache_img_url, self.area)
+	local rendered_img_rect = ya.image_show(cache_img_url, job.area)
 	local image_height = rendered_img_rect and rendered_img_rect.h or 0
-	ya.preview_widgets(self, {
+	ya.preview_widgets(job, {
 		ui.Text(lines)
 			:area(ui.Rect({
-				x = self.area.x,
-				y = self.area.y + image_height,
-				w = self.area.w,
-				h = self.area.h - image_height,
+				x = job.area.x,
+				y = job.area.y + image_height,
+				w = job.area.w,
+				h = job.area.h - image_height,
 			}))
 			:wrap(ui.Text.WRAP),
 	})
 end
 
-function M:seek(units)
+function M:seek(job)
 	local h = cx.active.current.hovered
-	if h and h.url == self.file.url then
+	if h and h.url == job.file.url then
 		ya.manager_emit("peek", {
-			math.max(0, cx.active.preview.skip + units),
-			only_if = self.file.url,
+			math.max(0, cx.active.preview.skip + job.units),
+			only_if = job.file.url,
 		})
 	end
 end
 
-function M:preload()
+function M:preload(job)
 	local video = require("video")
-	video = ya.dict_merge(video, { skip = self.skip, file = self.file })
-	local cache_img_status = video:preload()
+	video = ya.dict_merge(video, { skip = job.skip, file = job.file })
+	local cache_img_status = video:preload(job)
 	if cache_img_status ~= 1 then
 		return cache_img_status
 	end
 
-	local cache_img_url_no_skip = ya.file_cache({ file = self.file, skip = 0 })
+	local cache_img_url_no_skip = ya.file_cache({ file = job.file, skip = 0 })
 	local cache_mediainfo_url = Url(tostring(cache_img_url_no_skip) .. suffix)
 
 	local cha = fs.cha(cache_mediainfo_url)
@@ -104,7 +104,7 @@ function M:preload()
 		return 1
 	end
 	local cmd = "mediainfo"
-	local output, _ = Command(cmd):args({ tostring(self.file.url) }):stdout(Command.PIPED):output()
+	local output, _ = Command(cmd):args({ tostring(job.file.url) }):stdout(Command.PIPED):output()
 
 	return fs.write(
 		cache_mediainfo_url,
