@@ -1,3 +1,7 @@
+> [!NOTE]
+> Please use **boydaihungst**'s fork for the latest version of this plugin:
+> https://github.com/boydaihungst/mediainfo.yazi
+
 # mediainfo.yazi
 
 This is a Yazi plugin for previewing media files. The preview shows thumbnail
